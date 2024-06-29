@@ -21,6 +21,9 @@ jobs:
       - name: Build
         run: go build -o mnk
 
+      - name: Test
+        run: go test ./...
+
       - name: Release
         uses: softprops/action-gh-release@v1
         with:

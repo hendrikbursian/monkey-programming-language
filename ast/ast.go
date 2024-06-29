@@ -309,9 +309,18 @@ type StringLiteral struct {
 
 func (sl *StringLiteral) expressionNode()      {}
 func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
-func (sl *StringLiteral) String() string       { return sl.Token.Literal }
-func (sl *StringLiteral) Line() int            { return sl.Token.Line }
-func (sl *StringLiteral) Column() int          { return sl.Token.Column }
+func (sl *StringLiteral) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("\"")
+	out.WriteString(sl.Token.Literal)
+	out.WriteString("\"")
+
+	return string(out.Bytes())
+}
+
+func (sl *StringLiteral) Line() int   { return sl.Token.Line }
+func (sl *StringLiteral) Column() int { return sl.Token.Column }
 
 type ArrayLiteral struct {
 	Token    token.Token

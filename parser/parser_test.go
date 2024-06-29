@@ -414,7 +414,7 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 		},
 		{
 			"add(a * b[2], b[1], 2 * [1, 2][1])",
-			"add((a * (b[2])), (b[1]), (2 * ([1, 2][1]))",
+			"add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
 		},
 	}
 
@@ -426,7 +426,7 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 
 		actual := program.String()
 		if actual != test.expected {
-			t.Errorf("expected=%q, got=%q", test.expected, actual)
+			t.Errorf("\nexpected:\n%q, got=\n%q", test.expected, actual)
 		}
 	}
 }

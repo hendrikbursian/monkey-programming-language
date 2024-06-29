@@ -47,65 +47,36 @@ func TestString(t *testing.T) {
 		{
 			program: Program{
 				Statements: []Statement{
-
-					&LetStatement{
-						Token: token.Token{
-							Type:    token.LET,
-							Line:    1,
-							Column:  1,
-							Literal: "let",
-						},
-						Identifier: &Identifier{
-							Token: token.Token{
-								Type:    token.IDENTIFIER,
-								Literal: "myVar",
-								Line:    1,
-								Column:  5,
-							},
-							Value: "myVar",
-						},
-						Value: &ArrayLiteral{
-							Token: token.Token{
-								Type:    token.LEFT_SQUARE_BRACKET,
-								Line:    1,
-								Column:  1,
-								Literal: "[",
-							},
-							Values: []Expression{
+					&ExpressionStatement{
+						Expression: &ArrayLiteral{
+							Elements: []Expression{
 								&IntegerLiteral{
 									Token: token.Token{
-										Type:    token.INTEGER,
 										Literal: "4",
-										Line:    1,
-										Column:  2,
 									},
 									Value: 4,
 								},
 								&StringLiteral{
 									Token: token.Token{
-										Type:    token.STRING,
-										Literal: "\"hallo\"",
-										Line:    1,
-										Column:  2,
+										Literal: "hello",
 									},
-									Value: "hallo",
+									Value: "hello",
 								},
 							},
 						},
 					},
 				},
 			},
-			expectedString: `let myVar = [4, "hallo"];`,
+			expectedString: `[4, "hello"]`,
 		},
 	}
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-
+			if tt.program.String() != tt.expectedString {
+				t.Errorf("program.String() wrong, expected: %q. got=%q", tt.expectedString, tt.program.String())
+				return
+			}
 		})
-
-		if tt.program.String() != tt.expectedString {
-			t.Errorf("program.String() wrong, expected: %q. got=%q", tt.expectedString, tt.program.String())
-		}
 	}
 }
