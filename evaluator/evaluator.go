@@ -28,6 +28,54 @@ var builtins map[string]*object.Builtin = map[string]*object.Builtin{
 			}
 		},
 	},
+	"push": {
+		Fn: func(args ...object.Object) (object.Object, error) {
+			if len(args) != 2 {
+				return nil, fmt.Errorf("wrong number of arguments to push. got=%d, want=%d", len(args), 2)
+			}
+
+			arrObj, ok := args[0].(*object.Array)
+			if !ok {
+				return nil, fmt.Errorf("first argument to push has to be an array, got %s instead", args[0].Type())
+			}
+
+			arrObj.Elements = append(arrObj.Elements, args[1])
+
+			return arrObj, nil
+		},
+	},
+	"first": {
+		Fn: func(args ...object.Object) (object.Object, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("wrong number of arguments to first, got=%d, want=%d", len(args), 1)
+			}
+
+			arrObj, ok := args[0].(*object.Array)
+			if !ok {
+				return nil, fmt.Errorf("first argument to first has to be an array, got %s instead", args[0].Type())
+
+			}
+
+			// TODO: implement maybes
+			return arrObj.Elements[0], nil
+		},
+	},
+	"last": {
+		Fn: func(args ...object.Object) (object.Object, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("wrong number of arguments to last, got=%d, want=%d", len(args), 1)
+			}
+
+			arrObj, ok := args[0].(*object.Array)
+			if !ok {
+				return nil, fmt.Errorf("first argument to last has to be an array, got %s instead", args[0].Type())
+
+			}
+
+			// TODO implement maybes
+			return arrObj.Elements[len(arrObj.Elements)-1], nil
+		},
+	},
 }
 
 func Eval(node ast.Node, env *object.Environment) object.Object {

@@ -658,10 +658,9 @@ func TestCallExpressionParsing(t *testing.T) {
 		t.Fatalf("program.Statements[0] is not of type %T. got=%T", &ast.ExpressionStatement{}, program.Statements[0])
 	}
 
-	// TODO: check this error
 	call, ok := statement.Expression.(*ast.CallExpression)
 	if !ok {
-		t.Fatalf("statement.Exression not of type %T. got=%T", &ast.CallExpression{}, statement.Expression)
+		t.Fatalf("statement.Exression not of type %T. got=%T (%+v)", &ast.CallExpression{}, statement.Expression, statement.Expression)
 	}
 
 	if !testIdentifier(t, call.Function, "add") {
