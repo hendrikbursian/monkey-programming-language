@@ -2,11 +2,22 @@ package evaluator
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/hendrikbursian/monkey-programming-language/object"
 )
 
 var builtins map[string]*object.Builtin = map[string]*object.Builtin{
+	"puts": {
+		Fn: func(args ...object.Object) (object.Object, error) {
+			for _, arg := range args {
+				os.Stdout.WriteString(arg.Inspect())
+				os.Stdout.WriteString("\n")
+			}
+
+			return nil, nil
+		},
+	},
 	"l": {
 		Fn: func(args ...object.Object) (object.Object, error) {
 			if len(args) != 1 {
