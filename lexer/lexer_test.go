@@ -34,7 +34,9 @@ true != false
 "foo bar"
 
 [2, "hallo"]
-    `
+
+{ "hello": "world", 2: { true: "test" }}
+`
 	tests := []struct {
 		expectedType    token.TokenType
 		expectedLiteral string
@@ -62,14 +64,14 @@ true != false
 		{token.COMMA, ",", 4, 15},
 		{token.IDENTIFIER, "y", 4, 17},
 		{token.RIGHT_PAREN, ")", 4, 18},
-		{token.LEFT_BRACKET, "{", 4, 20},
+		{token.LEFT_CURLY_BRACE, "{", 4, 20},
 
 		{token.IDENTIFIER, "x", 5, 5},
 		{token.PLUS, "+", 5, 7},
 		{token.IDENTIFIER, "y", 5, 9},
 		{token.SEMICOLON, ";", 5, 10},
 
-		{token.RIGHT_BRACKET, "}", 6, 1},
+		{token.RIGHT_CURLY_BRACE, "}", 6, 1},
 		{token.SEMICOLON, ";", 6, 2},
 
 		{token.LET, "let", 8, 1},
@@ -104,7 +106,7 @@ true != false
 		{token.INTEGER, "5", 13, 4},
 		{token.LESS_THAN, "<", 13, 6},
 		{token.INTEGER, "10", 13, 8},
-		{token.LEFT_BRACKET, "{", 13, 11},
+		{token.LEFT_CURLY_BRACE, "{", 13, 11},
 
 		//     return true;
 		{token.RETURN, "return", 14, 5},
@@ -112,9 +114,9 @@ true != false
 		{token.SEMICOLON, ";", 14, 16},
 
 		// } else {
-		{token.RIGHT_BRACKET, "}", 15, 1},
+		{token.RIGHT_CURLY_BRACE, "}", 15, 1},
 		{token.ELSE, "else", 15, 3},
-		{token.LEFT_BRACKET, "{", 15, 8},
+		{token.LEFT_CURLY_BRACE, "{", 15, 8},
 
 		//     return false;
 		{token.RETURN, "return", 16, 5},
@@ -122,7 +124,7 @@ true != false
 		{token.SEMICOLON, ";", 16, 17},
 
 		// }
-		{token.RIGHT_BRACKET, "}", 17, 1},
+		{token.RIGHT_CURLY_BRACE, "}", 17, 1},
 
 		// true == true
 		{token.TRUE, "true", 19, 1},
@@ -144,7 +146,22 @@ true != false
 		{token.STRING, "hallo", 25, 5},
 		{token.RIGHT_SQUARE_BRACKET, "]", 25, 12},
 
-		{token.EOF, "", 26, 5},
+		// { "hello": "world", 2: { true: "test" }}
+		{token.LEFT_CURLY_BRACE, "{", 27, 1},
+		{token.STRING, "hello", 27, 3},
+		{token.COLON, ":", 27, 10},
+		{token.STRING, "world", 27, 12},
+		{token.COMMA, ",", 27, 19},
+		{token.INTEGER, "2", 27, 21},
+		{token.COLON, ":", 27, 22},
+		{token.LEFT_CURLY_BRACE, "{", 27, 24},
+		{token.TRUE, "true", 27, 26},
+		{token.COLON, ":", 27, 30},
+		{token.STRING, "test", 27, 32},
+		{token.RIGHT_CURLY_BRACE, "}", 27, 39},
+		{token.RIGHT_CURLY_BRACE, "}", 27, 40},
+
+		{token.EOF, "", 28, 1},
 	}
 
 	l := New(code)
@@ -153,22 +170,21 @@ true != false
 		tok := l.NextToken()
 		t.Run(fmt.Sprintf("test[%d] token: %s", i, tt.expectedType), func(t *testing.T) {
 			if tok.Type != tt.expectedType {
-				t.Errorf("test [%d] TokenType %s not correct. Should be: %s", i, tok.Type, tt.expectedType)
+				t.Errorf("test [%d] TokenType not correct. got=%s, want=%s", i, tok.Type, tt.expectedType)
 			}
 
 			if tok.Literal != tt.expectedLiteral {
-				t.Errorf("test [%d] TokenLiteral %s not correct. Should be: %s", i, tok.Literal, tt.expectedLiteral)
+				t.Errorf("test [%d] TokenLiterals not correct. got=%s, want=%s", i, tok.Literal, tt.expectedLiteral)
 			}
 
 			if tok.Line != tt.expectedLine {
-				t.Errorf("test [%d] TokenLine %d not correct. Should be: %d", i, tok.Line, tt.expectedLine)
+				t.Errorf("test [%d] TokenLine not correct. got=%d, want=%d", i, tok.Line, tt.expectedLine)
 			}
 
 			if tok.Column != tt.expectedColumn {
-				t.Errorf("test [%d] TokenColumn %d not correct. Should be: %d", i, tok.Column, tt.expectedColumn)
+				t.Errorf("test [%d] TokenColumn not correct. got=%d, want=%d", i, tok.Column, tt.expectedColumn)
 			}
 
 		})
 	}
-
 }

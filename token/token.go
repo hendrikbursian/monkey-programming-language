@@ -33,10 +33,11 @@ const (
 	// Delimiters
 	COMMA                = ","
 	SEMICOLON            = ";"
+	COLON                = ":"
 	LEFT_PAREN           = "("
 	RIGHT_PAREN          = ")"
-	LEFT_BRACKET         = "{"
-	RIGHT_BRACKET        = "}"
+	LEFT_CURLY_BRACE     = "{"
+	RIGHT_CURLY_BRACE    = "}"
 	LEFT_SQUARE_BRACKET  = "["
 	RIGHT_SQUARE_BRACKET = "]"
 

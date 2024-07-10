@@ -1,5 +1,8 @@
 package evaluator
 
+// Was soll der interpreter noch alles können?
+// TODO: Pfeil up in REPL
+// TODO  Add maybe let a = array[0]; a.hasValue == true || false; a.Value
 import (
 	"fmt"
 	"github.com/hendrikbursian/monkey-programming-language/ast"
@@ -11,72 +14,6 @@ var (
 	TRUE  = &object.Boolean{Value: true}
 	FALSE = &object.Boolean{Value: false}
 )
-
-var builtins map[string]*object.Builtin = map[string]*object.Builtin{
-	"l": {
-		Fn: func(args ...object.Object) (object.Object, error) {
-			if len(args) != 1 {
-				return nil, fmt.Errorf("wrong number of arguments. got=%d, want=%d", len(args), 1)
-			}
-			switch arg := args[0].(type) {
-			case *object.String:
-				return &object.Integer{Value: int64(len(arg.Value))}, nil
-			case *object.Array:
-				return &object.Integer{Value: int64(len(arg.Elements))}, nil
-			default:
-				return nil, fmt.Errorf("argument to `l` not supported. got=%s", arg.Type())
-			}
-		},
-	},
-	"push": {
-		Fn: func(args ...object.Object) (object.Object, error) {
-			if len(args) != 2 {
-				return nil, fmt.Errorf("wrong number of arguments to push. got=%d, want=%d", len(args), 2)
-			}
-
-			arrObj, ok := args[0].(*object.Array)
-			if !ok {
-				return nil, fmt.Errorf("first argument to push has to be an array, got %s instead", args[0].Type())
-			}
-
-			arrObj.Elements = append(arrObj.Elements, args[1])
-
-			return arrObj, nil
-		},
-	},
-	"first": {
-		Fn: func(args ...object.Object) (object.Object, error) {
-			if len(args) != 1 {
-				return nil, fmt.Errorf("wrong number of arguments to first, got=%d, want=%d", len(args), 1)
-			}
-
-			arrObj, ok := args[0].(*object.Array)
-			if !ok {
-				return nil, fmt.Errorf("first argument to first has to be an array, got %s instead", args[0].Type())
-
-			}
-
-			// TODO: implement maybes
-			return arrObj.Elements[0], nil
-		},
-	},
-	"last": {
-		Fn: func(args ...object.Object) (object.Object, error) {
-			if len(args) != 1 {
-				return nil, fmt.Errorf("wrong number of arguments to last, got=%d, want=%d", len(args), 1)
-			}
-
-			arrObj, ok := args[0].(*object.Array)
-			if !ok {
-				return nil, fmt.Errorf("first argument to last has to be an array, got %s instead", args[0].Type())
-
-			}
-
-			// TODO implement maybes
-			return arrObj.Elements[len(arrObj.Elements)-1], nil
-		},
-	},
-}
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
 	switch node := node.(type) {
@@ -112,6 +49,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalFunction(node, env)
 	case *ast.ArrayLiteral:
 		return evalArray(node, env)
+	case *ast.HashLiteral:
+		return evalHashLiteral(node, env)
 	case *ast.Boolean:
 		if node.Value {
 			return TRUE
@@ -392,22 +331,63 @@ func evalIndexExpression(node *ast.IndexExpression, env *object.Environment) obj
 		return index
 	}
 
-	if left.Type() != object.ARRAY_OBJECT {
+	switch left.Type() {
+	case object.ARRAY_OBJECT:
+		if index.Type() != object.INTEGER_OBJECT {
+			return newError(node.Index.Line(), node.Index.Column(), "cannot use %s as index for array", index.Type())
+		}
+		arrObj := left.(*object.Array)
+		idxValue := index.(*object.Integer).Value
+
+		if int(idxValue) < 0 || int(idxValue) >= len(arrObj.Elements) {
+			return newError(node.Index.Line(), node.Index.Column(), "index %d out of bounds (array length: %d)", idxValue, len(arrObj.Elements))
+		}
+
+		return arrObj.Elements[idxValue]
+	case object.HASH_OBJECT:
+		hashableIndex, ok := index.(object.Hashable)
+		if !ok {
+			return newError(node.Index.Line(), node.Index.Column(), "can not use index of type %s for hash", index.Type())
+		}
+
+		hash := left.(*object.Hash)
+		value, ok := hash.Pairs[hashableIndex.HashKey()]
+
+		if !ok {
+			return nil
+		}
+
+		return value.Value
+	default:
 		return newError(node.Line(), node.Column(), "cannot use index of %s", left.Type())
 	}
+}
 
-	if index.Type() != object.INTEGER_OBJECT {
-		return newError(node.Index.Line(), node.Index.Column(), "cannot use %s as index", index.Type())
+func evalHashLiteral(node *ast.HashLiteral, env *object.Environment) object.Object {
+	pairs := make(map[object.HashKey]object.HashPair)
+
+	for key, value := range node.Pairs {
+		keyObj := Eval(key, env)
+
+		if isError(keyObj) {
+			return keyObj
+		}
+
+		hashableKey, ok := keyObj.(object.Hashable)
+		if !ok {
+			return newError(value.Line(), value.Column(), "cannot use type %s as key for hash", keyObj.Type())
+		}
+
+		valueObj := Eval(value, env)
+		if isError(valueObj) {
+			return valueObj
+		}
+
+		hashed := hashableKey.HashKey()
+		pairs[hashed] = object.HashPair{Key: keyObj, Value: valueObj}
 	}
 
-	arrObj := left.(*object.Array)
-	idxValue := index.(*object.Integer).Value
-
-	if int(idxValue) < 0 || int(idxValue) >= len(arrObj.Elements) {
-		return newError(node.Index.Line(), node.Index.Column(), "index %d out of bounds (array length: %d)", idxValue, len(arrObj.Elements))
-	}
-
-	return arrObj.Elements[idxValue]
+	return &object.Hash{Pairs: pairs}
 }
 
 func evalExpressions(expressions []ast.Expression, env *object.Environment) []object.Object {

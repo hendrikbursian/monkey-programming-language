@@ -67,6 +67,7 @@ func New(lexer *lexer.Lexer) *Parser {
 	parser.registerPrefix(token.FUNCTION, parser.parseFunctionLiteral)
 	parser.registerPrefix(token.STRING, parser.parseStringLiteral)
 	parser.registerPrefix(token.LEFT_SQUARE_BRACKET, parser.parseArrayLiteral)
+	parser.registerPrefix(token.LEFT_CURLY_BRACE, parser.parseHashLiteral)
 
 	parser.infixParseFns = make(map[token.TokenType]infixParseFn)
 	parser.registerInfix(token.PLUS, parser.parseInfixExpression)
@@ -209,8 +210,8 @@ func (parser *Parser) parseExpression(precedence int) ast.Expression {
 	leftExpression := prefix()
 
 	for !parser.peekTokenIs(token.SEMICOLON) &&
-		!parser.peekTokenIs(token.LEFT_BRACKET) &&
-		!parser.peekTokenIs(token.RIGHT_BRACKET) &&
+		!parser.peekTokenIs(token.LEFT_CURLY_BRACE) &&
+		!parser.peekTokenIs(token.RIGHT_CURLY_BRACE) &&
 		precedence < parser.peekPrecedence() {
 
 		infix := parser.infixParseFns[parser.peekToken.Type]
@@ -247,7 +248,7 @@ func (parser *Parser) parseIfStatement() ast.Expression {
 	parser.nextToken()
 	expression.Condition = parser.parseExpression(LOWEST)
 
-	if !parser.expectPeek(token.LEFT_BRACKET) {
+	if !parser.expectPeek(token.LEFT_CURLY_BRACE) {
 		return nil
 	}
 
@@ -256,7 +257,7 @@ func (parser *Parser) parseIfStatement() ast.Expression {
 	if parser.peekTokenIs(token.ELSE) {
 		parser.nextToken()
 
-		if !parser.expectPeek(token.LEFT_BRACKET) {
+		if !parser.expectPeek(token.LEFT_CURLY_BRACE) {
 			return nil
 		}
 
@@ -274,7 +275,7 @@ func (parser *Parser) parseBlockStatement() *ast.BlockStatement {
 	}
 
 	parser.nextToken()
-	for !parser.currentTokenIs(token.RIGHT_BRACKET) && !parser.currentTokenIs(token.EOF) {
+	for !parser.currentTokenIs(token.RIGHT_CURLY_BRACE) && !parser.currentTokenIs(token.EOF) {
 		statement := parser.parseStatement()
 		if statement != nil {
 			block.Statements = append(block.Statements, statement)
@@ -331,7 +332,7 @@ func (parser *Parser) parseFunctionLiteral() ast.Expression {
 
 	function.Parameters = parser.parseFunctionParameters()
 
-	if !parser.expectPeek(token.LEFT_BRACKET) {
+	if !parser.expectPeek(token.LEFT_CURLY_BRACE) {
 		return nil
 	}
 
@@ -458,6 +459,37 @@ func (p *Parser) parseIndexExpression(left ast.Expression) ast.Expression {
 	}
 
 	return exp
+}
+
+func (p *Parser) parseHashLiteral() ast.Expression {
+	hash := &ast.HashLiteral{
+		Token: p.currentToken,
+		Pairs: make(map[ast.Expression]ast.Expression),
+	}
+
+	for !p.peekTokenIs(token.RIGHT_CURLY_BRACE) {
+		p.nextToken()
+		key := p.parseExpression(LOWEST)
+
+		if !p.expectPeek(token.COLON) {
+			return nil
+		}
+
+		p.nextToken()
+		value := p.parseExpression(LOWEST)
+
+		hash.Pairs[key] = value
+
+		if !p.peekTokenIs(token.RIGHT_CURLY_BRACE) && !p.expectPeek(token.COMMA) {
+			return nil
+		}
+	}
+
+	if !p.expectPeek(token.RIGHT_CURLY_BRACE) {
+		return nil
+	}
+
+	return hash
 }
 
 func (parser *Parser) expectPeek(tokenType token.TokenType) bool {

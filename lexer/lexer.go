@@ -61,10 +61,10 @@ func (lexer *Lexer) NextToken() token.Token {
 		tok = newToken(token.RIGHT_PAREN, lexer.char, lexer.line, lexer.column)
 		break
 	case '{':
-		tok = newToken(token.LEFT_BRACKET, lexer.char, lexer.line, lexer.column)
+		tok = newToken(token.LEFT_CURLY_BRACE, lexer.char, lexer.line, lexer.column)
 		break
 	case '}':
-		tok = newToken(token.RIGHT_BRACKET, lexer.char, lexer.line, lexer.column)
+		tok = newToken(token.RIGHT_CURLY_BRACE, lexer.char, lexer.line, lexer.column)
 		break
 	case '[':
 		tok = newToken(token.LEFT_SQUARE_BRACKET, lexer.char, lexer.line, lexer.column)
@@ -92,6 +92,9 @@ func (lexer *Lexer) NextToken() token.Token {
 		break
 	case '>':
 		tok = newToken(token.GREATER_THAN, lexer.char, lexer.line, lexer.column)
+		break
+	case ':':
+		tok = newToken(token.COLON, lexer.char, lexer.line, lexer.column)
 		break
 	case '!':
 		if lexer.peekChar() == '=' {

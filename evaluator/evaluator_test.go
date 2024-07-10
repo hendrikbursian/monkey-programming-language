@@ -479,6 +479,72 @@ func TestEvalIndexExpression(t *testing.T) {
 		})
 	}
 }
+
+func TestHashLiterals(t *testing.T) {
+	input := `let two = "two";
+    {
+        "one": 10-9,
+        two: 1+1,
+        "thre"+"e": [6/2],
+        4: 4,
+        true: 5,
+        false: 6,
+    }`
+
+	evaluated := testEval(input)
+	hashObj, ok := evaluated.(*object.Hash)
+	if !ok {
+		t.Errorf("evaluated ist not of type object.Hash. got=%T", evaluated)
+	}
+
+	expected := map[object.HashKey]interface{}{
+		(&object.String{Value: "one"}).HashKey():   1,
+		(&object.String{Value: "two"}).HashKey():   2,
+		(&object.String{Value: "three"}).HashKey(): []interface{}{3},
+		(&object.Integer{Value: 4}).HashKey():      4,
+		TRUE.HashKey():                             5,
+		FALSE.HashKey():                            6,
+	}
+
+	if len(hashObj.Pairs) != len(expected) {
+		t.Errorf("length of pairs is not %d. got=%d ", len(expected), len(hashObj.Pairs))
+	}
+
+	for k, v := range expected {
+		pair, ok := hashObj.Pairs[k]
+		if !ok {
+			t.Errorf("no pair for given key: %+v", k)
+		}
+
+		testObjects(t, pair.Value, v)
+	}
+
+}
+
+func TestHashIndexExpressions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{`{"foo": 5}["foo"]`, 5},
+		{`{"foo": 5}["bar"]`, nil},
+		{`let key = "foo";{"foo": 5}[key]`, 5},
+		{`{}["foo"]`, nil},
+		{`{5: 5}[5]`, 5},
+		{`{true: 5}[true]`, 5},
+		{`{true: 5}[false]`, nil},
+		{`{true: 5}[fn(){}]`, errors.New("can not use index of type FUNCTION for hash")},
+	}
+
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			evaluated := testEval(tt.input)
+			testObjects(t, evaluated, tt.expected)
+		})
+	}
+
+}
+
 func testEval(code string) object.Object {
 	lexer := lexer.New(code)
 	parser := parser.New(lexer)
@@ -571,6 +637,11 @@ func testObjects(t *testing.T, obj object.Object, expected interface{}) bool {
 
 		if errObj.Message != e.Error() {
 			t.Errorf("errObj.message is not %q. got=%q", e.Error(), errObj.Message)
+			return false
+		}
+	case nil:
+		if obj != nil {
+			t.Errorf("object is not nil. got=%T (%v)", expected, e)
 			return false
 		}
 	case []interface{}:

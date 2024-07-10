@@ -3,8 +3,10 @@ package object
 import (
 	"bytes"
 	"fmt"
-	"github.com/hendrikbursian/monkey-programming-language/ast"
+	"hash/fnv"
 	"strings"
+
+	"github.com/hendrikbursian/monkey-programming-language/ast"
 )
 
 type ObjectType string
@@ -18,6 +20,7 @@ const (
 	STRING_OBJECT       = "STRING"
 	BUILTIN_OBJECT      = "BUILTIN"
 	ARRAY_OBJECT        = "ARRAY"
+	HASH_OBJECT         = "HASH"
 )
 
 type Environment struct {
@@ -56,6 +59,57 @@ func (env *Environment) Set(name string, value Object) Object {
 type Object interface {
 	Type() ObjectType
 	Inspect() string
+}
+
+type HashKey struct {
+	Type  ObjectType
+	Value uint64
+}
+
+type Hashable interface {
+	HashKey() HashKey
+}
+
+var hashKeyCache map[any]HashKey = map[any]HashKey{}
+
+func (obj *Boolean) HashKey() HashKey {
+	if value, ok := hashKeyCache[obj]; ok {
+		return value
+	}
+
+	var value uint64
+
+	if obj.Value {
+		value = 1
+	} else {
+		value = 0
+	}
+
+	v := HashKey{obj.Type(), value}
+	hashKeyCache[obj] = v
+	return v
+}
+
+func (obj *Integer) HashKey() HashKey {
+	if value, ok := hashKeyCache[obj]; ok {
+		return value
+	}
+	v := HashKey{obj.Type(), uint64(obj.Value)}
+	hashKeyCache[obj] = v
+	return v
+}
+
+func (obj *String) HashKey() HashKey {
+	if value, ok := hashKeyCache[obj]; ok {
+		return value
+	}
+
+	h := fnv.New64a()
+	h.Write([]byte(obj.Value))
+
+	v := HashKey{obj.Type(), h.Sum64()}
+	hashKeyCache[obj] = v
+	return v
 }
 
 type Integer struct {
@@ -153,6 +207,31 @@ func (a *Array) Inspect() string {
 	out.WriteString("[")
 	out.WriteString(strings.Join(elements, ", "))
 	out.WriteString("]")
+
+	return out.String()
+}
+
+type HashPair struct {
+	Key   Object
+	Value Object
+}
+
+type Hash struct {
+	Pairs map[HashKey]HashPair
+}
+
+func (h *Hash) Type() ObjectType { return HASH_OBJECT }
+func (h *Hash) Inspect() string {
+	var out bytes.Buffer
+
+	pairs := []string{}
+	for _, pair := range h.Pairs {
+		pairs = append(pairs, fmt.Sprintf("%s: %s", pair.Key.Inspect(), pair.Value.Inspect()))
+	}
+
+	out.WriteString("{")
+	out.WriteString(strings.Join(pairs, ", "))
+	out.WriteString("}")
 
 	return out.String()
 }
