@@ -21,6 +21,7 @@ const (
 	BUILTIN_OBJECT      = "BUILTIN"
 	ARRAY_OBJECT        = "ARRAY"
 	HASH_OBJECT         = "HASH"
+	MAYBE_OBJECT        = "MAYBE"
 )
 
 type Environment struct {
@@ -232,6 +233,25 @@ func (h *Hash) Inspect() string {
 	out.WriteString("{")
 	out.WriteString(strings.Join(pairs, ", "))
 	out.WriteString("}")
+
+	return out.String()
+}
+
+type Maybe struct {
+	Value Object
+}
+
+func (m *Maybe) Type() ObjectType { return MAYBE_OBJECT }
+func (m *Maybe) Inspect() string {
+	var out bytes.Buffer
+
+	out.WriteString("maybe(")
+	if m.Value == nil {
+		out.WriteString("[no value]")
+	} else {
+		out.WriteString(m.Value.Inspect())
+	}
+	out.WriteString(")")
 
 	return out.String()
 }

@@ -96,6 +96,9 @@ func (lexer *Lexer) NextToken() token.Token {
 	case ':':
 		tok = newToken(token.COLON, lexer.char, lexer.line, lexer.column)
 		break
+	case '.':
+		tok = newToken(token.DOT, lexer.char, lexer.line, lexer.column)
+		break
 	case '!':
 		if lexer.peekChar() == '=' {
 			tok.Type = token.NOT_EQUAL

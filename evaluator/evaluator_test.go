@@ -93,25 +93,18 @@ func TestIfElseExpressions(t *testing.T) {
 		input    string
 		expected interface{}
 	}{
-		{"if true { 10 }", 10},
-		{"if false { 10 }", nil},
-		{"if 1 < 2 { 10 }", 10},
-		{"if 1 > 2 { 10 }", nil},
-		{"if 1 > 2 { 10 } else { 20 }", 20},
-		{"if 1 < 2 { 10 } else { 20 }", 10},
+		{"if true { 10 }", Maybe{10}},
+		{"if false { 10 }", Maybe{nil}},
+		{"if 1 < 2 { 10 }", Maybe{10}},
+		{"if 1 > 2 { 10 }", Maybe{nil}},
+		{"if 1 > 2 { 10 } else { 20 }", Maybe{20}},
+		{"if 1 < 2 { 10 } else { 20 }", Maybe{10}},
 	}
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			evaluated := testEval(test.input)
-			integer, ok := test.expected.(int)
-			if ok {
-				testIntegerObject(t, evaluated, int64(integer))
-			} else {
-				if evaluated != nil {
-					t.Errorf("evaluated is not nil. got=%T (%+v)", evaluated, evaluated)
-				}
-			}
+			testObjects(t, evaluated, test.expected)
 		})
 	}
 }
@@ -119,25 +112,35 @@ func TestIfElseExpressions(t *testing.T) {
 func TestReturnStatements(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected int64
+		expected interface{}
 	}{
 		{"return 10;", 10},
 		{"return 10; 9;", 10},
 		{"return 2*5; 9;", 10},
 		{"9; return 2*5; 9;", 10},
 		{`if 10 > 1 {
-            if 10 > 1 {
-              return 10;
-            }
+              if 10 > 1 {
+                return 10;
+              }
 
-            return 1
-          }`, 10},
+              return 1
+          }`, Maybe{10}},
+		{`if 10 > 1 {
+		          return 1
+		        }`, Maybe{1}},
+		{`if 10 < 1 {
+		          return 1
+		        }`, Maybe{nil}},
+		{`if 10 > 1 {
+		          return 1
+		        }
+		        return 10`, Maybe{1}},
 	}
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			evaluated := testEval(test.input)
-			testIntegerObject(t, evaluated, test.expected)
+			testObjects(t, evaluated, test.expected)
 		})
 	}
 }
@@ -438,27 +441,43 @@ func TestEvalIndexExpression(t *testing.T) {
 	}{
 		{
 			`["test"][0]`,
+			Maybe{"test"},
+		},
+		{
+			`[["test"][0]][0]`,
+			Maybe{"test"},
+		},
+		{
+			`[["test"][0]][0].hasValue`,
+			true,
+		},
+		{
+			`[["test"][0]].value`,
+			errors.New("ARRAY has no property \"value\"."),
+		},
+		{
+			`[["test"][0]][0].value`,
 			"test",
 		},
 		{
 			`["test", "world"][1]`,
-			"world",
+			Maybe{"world"},
 		},
 		{
 			`[1, "test", "world"][0]`,
-			1,
+			Maybe{1},
 		},
 		{
 			`[["hello"][0], "test", "world"][1-1]`,
-			"hello",
+			Maybe{"hello"},
 		},
 		{
-			`let test = fn(){"hello"}; [[test()][fn(){if true {return 0}}()], "test", "world"][1-1]`,
+			`let test = fn(){"hello"}; [[test()][fn(){if true {return 0}}().value], "test", "world"][1-1].value`,
 			"hello",
 		},
 		{
 			`["hello"][2]`,
-			errors.New("index 2 out of bounds (array length: 1)"),
+			Maybe{nil},
 		},
 	}
 
@@ -466,16 +485,7 @@ func TestEvalIndexExpression(t *testing.T) {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			evaluated := testEval(test.input)
 
-			switch expected := test.expected.(type) {
-			case string:
-				testStringObject(t, evaluated, expected)
-			case int:
-				testIntegerObject(t, evaluated, int64(expected))
-			case bool:
-				testBooleanObject(t, evaluated, expected)
-			case error:
-				testErrorObject(t, evaluated, expected.Error())
-			}
+			testObjects(t, evaluated, test.expected)
 		})
 	}
 }
@@ -526,13 +536,13 @@ func TestHashIndexExpressions(t *testing.T) {
 		input    string
 		expected interface{}
 	}{
-		{`{"foo": 5}["foo"]`, 5},
-		{`{"foo": 5}["bar"]`, nil},
-		{`let key = "foo";{"foo": 5}[key]`, 5},
-		{`{}["foo"]`, nil},
-		{`{5: 5}[5]`, 5},
-		{`{true: 5}[true]`, 5},
-		{`{true: 5}[false]`, nil},
+		{`{"foo": 5}["foo"]`, Maybe{5}},
+		{`{"foo": 5}["bar"]`, Maybe{nil}},
+		{`let key = "foo";{"foo": 5}[key]`, Maybe{5}},
+		{`{}["foo"]`, Maybe{nil}},
+		{`{5: 5}[5]`, Maybe{5}},
+		{`{true: 5}[true]`, Maybe{5}},
+		{`{true: 5}[false]`, Maybe{nil}},
 		{`{true: 5}[fn(){}]`, errors.New("can not use index of type FUNCTION for hash")},
 	}
 
@@ -543,6 +553,45 @@ func TestHashIndexExpressions(t *testing.T) {
 		})
 	}
 
+}
+
+func TestPropertyExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{`["test"][0].hasValue`, true},
+		{`["test"][0].hasValue`, true},
+		{`["test"].hasValue`, errors.New("ARRAY has no property \"hasValue\".")},
+	}
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%d - %s", i, tt.input), func(t *testing.T) {
+			evaluated := testEval(tt.input)
+			testObjects(t, evaluated, tt.expected)
+		})
+	}
+}
+
+type Maybe struct{ Value interface{} }
+
+func TestMaybe(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{`["test"][0]`, Maybe{"test"}},
+		{`["test"][1].hasValue`, false},
+		{`["test"][0].hasValue`, true},
+		{`["test"][0].value`, "test"},
+		{`["test"][1].value`, errors.New(`"([\"test\"][1]).value" has no value! check before with "hasValue"!`)},
+	}
+
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%d - %s", i, tt.input), func(t *testing.T) {
+			evaluated := testEval(tt.input)
+			testObjects(t, evaluated, tt.expected)
+		})
+	}
 }
 
 func testEval(code string) object.Object {
@@ -642,6 +691,19 @@ func testObjects(t *testing.T, obj object.Object, expected interface{}) bool {
 	case nil:
 		if obj != nil {
 			t.Errorf("object is not nil. got=%T (%v)", expected, e)
+			return false
+		}
+	case Maybe:
+		if obj.Type() != object.MAYBE_OBJECT {
+			t.Errorf("object is not of type maybe. got=%T (%v)", obj, obj)
+		}
+
+		maybe, ok := obj.(*object.Maybe)
+		if !ok {
+			t.Errorf("object is not of type maybe. got=%T (%+v)", e.Value, obj)
+		}
+
+		if !testObjects(t, maybe.Value, e.Value) {
 			return false
 		}
 	case []interface{}:

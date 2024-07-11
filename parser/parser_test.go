@@ -8,7 +8,6 @@ import (
 )
 
 func TestLetStatements(t *testing.T) {
-
 	tests := []struct {
 		code               string
 		expectedIdentifier string
@@ -971,4 +970,26 @@ func TestEmptyHashLiteral(t *testing.T) {
 	if len(hash.Pairs) != 0 {
 		t.Errorf("length of hash.Pairs is incorrect. got=%d, want=%d", len(hash.Pairs), 0)
 	}
+}
+
+func TestProperty(t *testing.T) {
+	input := `["test"][0].hasValue`
+
+	p, program := testParse(input)
+	checkParserErrors(t, p)
+
+	stmt := program.Statements[0].(*ast.ExpressionStatement)
+	prop, ok := stmt.Expression.(*ast.PropertyExpression)
+	if !ok {
+		t.Errorf("stmt.Expresison is not ast.Property. got=%T", stmt.Expression)
+	}
+
+	if _, ok := prop.Subject.(*ast.IndexExpression); !ok {
+		t.Errorf("subject is not an IndexExpression. got=%T(%v)", prop.Subject, prop.Subject)
+	}
+
+	if prop.Name.Value != "hasValue" {
+		t.Errorf("property name is not %s. got=%s", "hasValue", prop.Name.Value)
+	}
+
 }

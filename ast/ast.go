@@ -2,8 +2,9 @@ package ast
 
 import (
 	"bytes"
-	"github.com/hendrikbursian/monkey-programming-language/token"
 	"strings"
+
+	"github.com/hendrikbursian/monkey-programming-language/token"
 )
 
 type Node interface {
@@ -128,7 +129,6 @@ func (statement *ReturnStatement) String() string {
 	return out.String()
 }
 
-// TODO: dont use ExpressionStatements solo
 type ExpressionStatement struct {
 	Token      token.Token
 	Expression Expression
@@ -387,6 +387,26 @@ func (hl *HashLiteral) String() string {
 	out.WriteString("{")
 	out.WriteString(strings.Join(pairs, ", "))
 	out.WriteString("}")
+
+	return out.String()
+}
+
+type PropertyExpression struct {
+	Token   token.Token
+	Subject Expression
+	Name    *Identifier
+}
+
+func (p *PropertyExpression) expressionNode()      {}
+func (p *PropertyExpression) TokenLiteral() string { return p.Token.Literal }
+func (p *PropertyExpression) Line() int            { return p.Name.Line() }
+func (p *PropertyExpression) Column() int          { return p.Name.Column() }
+func (p *PropertyExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(p.Subject.String())
+	out.WriteString(".")
+	out.WriteString(p.Name.String())
 
 	return out.String()
 }

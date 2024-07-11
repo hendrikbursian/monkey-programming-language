@@ -17,6 +17,7 @@ const (
 	PRODUCT
 	PREFIX
 	FUNCTION_CALL
+	PROPERTY
 	INDEX
 )
 
@@ -31,6 +32,7 @@ var precedences = map[token.TokenType]int{
 	token.ASTERISK:            PRODUCT,
 	token.LEFT_PAREN:          FUNCTION_CALL,
 	token.LEFT_SQUARE_BRACKET: INDEX,
+	token.DOT:                 PROPERTY,
 }
 
 type (
@@ -80,6 +82,7 @@ func New(lexer *lexer.Lexer) *Parser {
 	parser.registerInfix(token.GREATER_THAN, parser.parseInfixExpression)
 	parser.registerInfix(token.LEFT_PAREN, parser.parseCallExpression)
 	parser.registerInfix(token.LEFT_SQUARE_BRACKET, parser.parseIndexExpression)
+	parser.registerInfix(token.DOT, parser.parsePropertyExpression)
 
 	parser.nextToken()
 	parser.nextToken()
@@ -490,6 +493,23 @@ func (p *Parser) parseHashLiteral() ast.Expression {
 	}
 
 	return hash
+}
+
+func (p *Parser) parsePropertyExpression(left ast.Expression) ast.Expression {
+	property := &ast.PropertyExpression{
+		Token:   p.currentToken,
+		Subject: left,
+	}
+
+	if !p.peekTokenIs(token.IDENTIFIER) {
+		return nil
+	}
+
+	p.nextToken()
+	name := p.parseIdentifier().(*ast.Identifier)
+	property.Name = name
+
+	return property
 }
 
 func (parser *Parser) expectPeek(tokenType token.TokenType) bool {

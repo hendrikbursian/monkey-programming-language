@@ -34,6 +34,7 @@ const (
 	COMMA                = ","
 	SEMICOLON            = ";"
 	COLON                = ":"
+	DOT                  = "."
 	LEFT_PAREN           = "("
 	RIGHT_PAREN          = ")"
 	LEFT_CURLY_BRACE     = "{"

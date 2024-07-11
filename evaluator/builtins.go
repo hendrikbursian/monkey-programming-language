@@ -61,8 +61,7 @@ var builtins map[string]*object.Builtin = map[string]*object.Builtin{
 
 			}
 
-			// TODO: implement maybes
-			return arrObj.Elements[0], nil
+			return wrapMaybe(arrObj.Elements[0]), nil
 		},
 	},
 	"last": {
@@ -77,8 +76,7 @@ var builtins map[string]*object.Builtin = map[string]*object.Builtin{
 
 			}
 
-			// TODO implement maybes
-			return arrObj.Elements[len(arrObj.Elements)-1], nil
+			return wrapMaybe(arrObj.Elements[len(arrObj.Elements)-1]), nil
 		},
 	},
 }

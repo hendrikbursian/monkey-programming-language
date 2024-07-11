@@ -1,8 +1,5 @@
 package evaluator
 
-// Was soll der interpreter noch alles können?
-// TODO: Pfeil up in REPL
-// TODO  Add maybe let a = array[0]; a.hasValue == true || false; a.Value
 import (
 	"fmt"
 	"github.com/hendrikbursian/monkey-programming-language/ast"
@@ -11,8 +8,9 @@ import (
 )
 
 var (
-	TRUE  = &object.Boolean{Value: true}
-	FALSE = &object.Boolean{Value: false}
+	TRUE        = &object.Boolean{Value: true}
+	FALSE       = &object.Boolean{Value: false}
+	EMPTY_MAYBE = object.Maybe{Value: nil}
 )
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
@@ -38,6 +36,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalCallExpression(node, env)
 	case *ast.IndexExpression:
 		return evalIndexExpression(node, env)
+	case *ast.PropertyExpression:
+		return evalPropertyExpression(node, env)
 
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
@@ -147,7 +147,7 @@ func evalInfixExpression(node *ast.InfixExpression, env *object.Environment) obj
 	case node.Operator == "!=":
 		return getBooleanObject(left != right)
 	case left.Type() != right.Type():
-		return newError(node.Right.Line(), node.Right.Column(), "type mismatch: %s %s %s, expecting: %[1]s", left.Type(), node.Operator, right.Type())
+		return newError(node.Right.Line(), node.Right.Column(), "type mismatch: %s %s %s", left.Type(), node.Operator, right.Type())
 	default:
 		return newError(node.Line(), node.Column(), "unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
 	}
@@ -215,15 +215,37 @@ func evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Obje
 
 	switch condition {
 	case TRUE:
-		return Eval(ie.Consequence, env)
-	case FALSE:
-		if ie.Alternative == nil {
-			return nil
+		value := Eval(ie.Consequence, env)
+		if isError(value) {
+			return value
 		}
 
-		return Eval(ie.Alternative, env)
+		return wrapMaybe(value)
+	case FALSE:
+		if ie.Alternative == nil {
+			return &EMPTY_MAYBE
+		}
+
+		value := Eval(ie.Alternative, env)
+		if isError(value) {
+			return value
+		}
+
+		return wrapMaybe(value)
 	default:
-		return nil
+		return &EMPTY_MAYBE
+	}
+}
+
+func wrapMaybe(value object.Object) object.Object {
+	switch obj := value.(type) {
+	case *object.ReturnValue:
+		obj.Value = wrapMaybe(obj.Value)
+		return obj
+	case *object.Maybe:
+		return obj
+	default:
+		return &object.Maybe{Value: value}
 	}
 }
 
@@ -340,10 +362,10 @@ func evalIndexExpression(node *ast.IndexExpression, env *object.Environment) obj
 		idxValue := index.(*object.Integer).Value
 
 		if int(idxValue) < 0 || int(idxValue) >= len(arrObj.Elements) {
-			return newError(node.Index.Line(), node.Index.Column(), "index %d out of bounds (array length: %d)", idxValue, len(arrObj.Elements))
+			return &EMPTY_MAYBE
 		}
 
-		return arrObj.Elements[idxValue]
+		return wrapMaybe(arrObj.Elements[idxValue])
 	case object.HASH_OBJECT:
 		hashableIndex, ok := index.(object.Hashable)
 		if !ok {
@@ -352,12 +374,11 @@ func evalIndexExpression(node *ast.IndexExpression, env *object.Environment) obj
 
 		hash := left.(*object.Hash)
 		value, ok := hash.Pairs[hashableIndex.HashKey()]
-
 		if !ok {
-			return nil
+			return &EMPTY_MAYBE
 		}
 
-		return value.Value
+		return wrapMaybe(value.Value)
 	default:
 		return newError(node.Line(), node.Column(), "cannot use index of %s", left.Type())
 	}
@@ -403,6 +424,28 @@ func evalExpressions(expressions []ast.Expression, env *object.Environment) []ob
 	}
 
 	return result
+}
+func evalPropertyExpression(prop *ast.PropertyExpression, env *object.Environment) object.Object {
+	subject := Eval(prop.Subject, env)
+	if isError(subject) {
+		return subject
+	}
+
+	switch sub := subject.(type) {
+	case *object.Maybe:
+		switch prop.Name.Value {
+		case "hasValue":
+			return getBooleanObject(sub.Value != nil)
+		case "value":
+			if sub.Value == nil {
+				return newError(prop.Line(), prop.Column(), "%q has no value! check before with \"hasValue\"!", prop.String())
+			}
+
+			return sub.Value
+		}
+	}
+
+	return newError(prop.Line(), prop.Column(), "%s has no property %q.", subject.Type(), prop.Name.TokenLiteral())
 }
 
 func unwrapReturnValue(obj object.Object) object.Object {

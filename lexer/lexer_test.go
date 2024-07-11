@@ -36,6 +36,8 @@ true != false
 [2, "hallo"]
 
 { "hello": "world", 2: { true: "test" }}
+
+["test"][0].hasValue
 `
 	tests := []struct {
 		expectedType    token.TokenType
@@ -161,7 +163,17 @@ true != false
 		{token.RIGHT_CURLY_BRACE, "}", 27, 39},
 		{token.RIGHT_CURLY_BRACE, "}", 27, 40},
 
-		{token.EOF, "", 28, 1},
+		// ["test"][0].hasValue
+		{token.LEFT_SQUARE_BRACKET, "[", 29, 1},
+		{token.STRING, "test", 29, 2},
+		{token.RIGHT_SQUARE_BRACKET, "]", 29, 8},
+		{token.LEFT_SQUARE_BRACKET, "[", 29, 9},
+		{token.INTEGER, "0", 29, 10},
+		{token.RIGHT_SQUARE_BRACKET, "]", 29, 11},
+		{token.DOT, ".", 29, 12},
+		{token.IDENTIFIER, "hasValue", 29, 13},
+
+		{token.EOF, "", 30, 1},
 	}
 
 	l := New(code)
