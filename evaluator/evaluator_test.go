@@ -154,12 +154,12 @@ func TestErrorHandling(t *testing.T) {
 	}{
 		{
 			"5+true;",
-			"type mismatch: INTEGER + BOOLEAN, expecting: INTEGER",
+			"type mismatch: INTEGER + BOOLEAN",
 			1, 3,
 		},
 		{
 			"10;5+true; 5;",
-			"type mismatch: INTEGER + BOOLEAN, expecting: INTEGER",
+			"type mismatch: INTEGER + BOOLEAN",
 			1, 6,
 		},
 		{
@@ -363,10 +363,10 @@ func TestBuiltinFunctions(t *testing.T) {
 		}},
 		{`first("hello", "what?")`, errors.New("wrong number of arguments to first, got=2, want=1")},
 		{`first("hello")`, errors.New("first argument to first has to be an array, got STRING instead")},
-		{`first(["hello", "world"])`, "hello"},
+		{`first(["hello", "world"])`, Maybe{"hello"}},
 		{`last("hello", "what?")`, errors.New("wrong number of arguments to last, got=2, want=1")},
 		{`last("hello")`, errors.New("first argument to last has to be an array, got STRING instead")},
-		{`last(["hello", "world"])`, "world"},
+		{`last(["hello", "world"])`, Maybe{"world"}},
 	}
 
 	for i, test := range tests {
