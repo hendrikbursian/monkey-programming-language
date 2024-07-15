@@ -23,12 +23,3 @@ jobs:
 
       - name: Build
         run: go build -o mnk
-
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: mnk
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
